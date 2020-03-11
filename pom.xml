@@ -4,6 +4,16 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
+    <properties>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <jvm.options.xms>-Xms512M</jvm.options.xms>
+        <jvm.options.xmx>-Xmx2048M</jvm.options.xmx>
+        <jvm.options.maxpermsize>-XX:MaxPermSize=2048M</jvm.options.maxpermsize>
+        <jvm.options.xx>-XX:+CMSClassUnloadingEnabled</jvm.options.xx>
+    </properties>
+
+
     <groupId>com.yadchuk</groupId>
     <artifactId>Crashes</artifactId>
     <version>1.0-SNAPSHOT</version>
@@ -47,9 +57,10 @@
                 <version>3.3.2</version>
                 <executions>
                     <execution>
-                        <id>compile</id>
                         <goals>
+                            <goal>add-source</goal>
                             <goal>compile</goal>
+                            <goal>testCompile</goal>
                         </goals>
                         <phase>compile</phase>
                     </execution>
@@ -67,6 +78,25 @@
                         </manifest>
                     </archive>
                 </configuration>
+            </plugin>
+
+            <plugin>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>3.1.1</version>
+                <configuration>
+                    <descriptorRefs>
+                        <descriptorRef>jar-with-dependencies</descriptorRef>
+                    </descriptorRefs>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>make-assembly</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
 
         </plugins>
