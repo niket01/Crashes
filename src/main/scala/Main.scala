@@ -14,7 +14,7 @@ import org.apache.spark.streaming.pubsub.{PubsubUtils, SparkGCPCredentials}
 object Main {
   def main(args: Array[String]) : Unit = {
     val projectID = "igneous-equinox-269508"
-    val slidingInterval: Int = 60
+    val slidingInterval: Int = 5*60
 
     val appName = "SparkCrashes"
 
@@ -38,35 +38,35 @@ object Main {
 
     val schema = StructType(
       List(
-        StructField("CRASH_DATE", StringType, true),
-        StructField("CRASH_TIME", StringType, true),
-        StructField("BOROUGH", StringType, true),
-        StructField("ZIP_CODE", StringType, true),
-        StructField("LATITUDE", StringType, true),
-        StructField("LONGITUDE", StringType, true),
-        StructField("LOCATION", StringType, true),
-        StructField("ON_STREET_NAME", StringType, true),
-        StructField("CROSS_STREET_NAME", StringType, true),
-        StructField("OFF_STREET_NAME", StringType, true),
-        StructField("NUMBER_OF_PERSONS_INJURED", IntegerType, true),
-        StructField("NUMBER_OF_PERSONS_KILLED", IntegerType, true),
-        StructField("NUMBER_OF_PEDESTRIANS_INJURED", IntegerType, true),
-        StructField("NUMBER_OF_PEDESTRIANS_KILLED", IntegerType, true),
-        StructField("NUMBER_OF_CYCLIST_INJURED", IntegerType, true),
-        StructField("NUMBER_OF_CYCLIST_KILLED", IntegerType, true),
-        StructField("NUMBER_OF_MOTORIST_INJURED", IntegerType, true),
-        StructField("NUMBER_OF_MOTORIST_KILLED", IntegerType, true),
-        StructField("CONTRIBUTING_FACTOR_VEHICLE_1", StringType, true),
-        StructField("CONTRIBUTING_FACTOR_VEHICLE_2", StringType, true),
-        StructField("CONTRIBUTING_FACTOR_VEHICLE_3", StringType, true),
-        StructField("CONTRIBUTING_FACTOR_VEHICLE_4", StringType, true),
-        StructField("CONTRIBUTING_FACTOR_VEHICLE_5", StringType, true),
-        StructField("COLLISION_ID", StringType, true),
-        StructField("VEHICLE_TYPE_CODE_1", StringType, true),
-        StructField("VEHICLE_TYPE_CODE_2", StringType, true),
-        StructField("VEHICLE_TYPE_CODE_3", StringType, true),
-        StructField("VEHICLE_TYPE_CODE_4", StringType, true),
-        StructField("VEHICLE_TYPE_CODE_5", StringType, true)
+        StructField("CRASH_DATE", StringType, nullable = true),
+        StructField("CRASH_TIME", StringType, nullable = true),
+        StructField("BOROUGH", StringType, nullable = true),
+        StructField("ZIP_CODE", StringType, nullable = true),
+        StructField("LATITUDE", StringType, nullable = true),
+        StructField("LONGITUDE", StringType, nullable = true),
+        StructField("LOCATION", StringType, nullable = true),
+        StructField("ON_STREET_NAME", StringType, nullable = true),
+        StructField("CROSS_STREET_NAME", StringType, nullable = true),
+        StructField("OFF_STREET_NAME", StringType, nullable = true),
+        StructField("NUMBER_OF_PERSONS_INJURED", StringType, nullable = true),
+        StructField("NUMBER_OF_PERSONS_KILLED", StringType, nullable = true),
+        StructField("NUMBER_OF_PEDESTRIANS_INJURED", StringType, nullable = true),
+        StructField("NUMBER_OF_PEDESTRIANS_KILLED", StringType, nullable = true),
+        StructField("NUMBER_OF_CYCLIST_INJURED", StringType, nullable = true),
+        StructField("NUMBER_OF_CYCLIST_KILLED", StringType, nullable = true),
+        StructField("NUMBER_OF_MOTORIST_INJURED", StringType, nullable = true),
+        StructField("NUMBER_OF_MOTORIST_KILLED", StringType, nullable = true),
+        StructField("CONTRIBUTING_FACTOR_VEHICLE_1", StringType, nullable = true),
+        StructField("CONTRIBUTING_FACTOR_VEHICLE_2", StringType, nullable = true),
+        StructField("CONTRIBUTING_FACTOR_VEHICLE_3", StringType, nullable = true),
+        StructField("CONTRIBUTING_FACTOR_VEHICLE_4", StringType, nullable = true),
+        StructField("CONTRIBUTING_FACTOR_VEHICLE_5", StringType, nullable = true),
+        StructField("COLLISION_ID", StringType, nullable = true),
+        StructField("VEHICLE_TYPE_CODE_1", StringType, nullable = true),
+        StructField("VEHICLE_TYPE_CODE_2", StringType, nullable = true),
+        StructField("VEHICLE_TYPE_CODE_3", StringType, nullable = true),
+        StructField("VEHICLE_TYPE_CODE_4", StringType, nullable = true),
+        StructField("VEHICLE_TYPE_CODE_5", StringType, nullable = true)
       )
     )
 
@@ -76,14 +76,14 @@ object Main {
           .map {
             attribute =>
               attribute.take(10).toList :::
-              List(attribute(10).toInt,
-                attribute(11).toInt,
-                attribute(12).toInt,
-                attribute(13).toInt,
-                attribute(14).toInt,
-                attribute(15).toInt,
-                attribute(16).toInt,
-                attribute(17).toInt
+              List(attribute(10),
+                attribute(11),
+                attribute(12),
+                attribute(13),
+                attribute(14),
+                attribute(15),
+                attribute(16),
+                attribute(17)
               ) :::
               attribute.takeRight(11).toList
           }
@@ -121,11 +121,13 @@ object Main {
 
               /* коннектор к big query + импорт данных в созданные таблицы */
 
-              newCrashDF.write.parquet("gs://crashes_bucket/data/")
-              top20_ZIP_CODE.write.parquet("gs://crashes_bucket/top20_ZIP_CODE/")
-              top10_BOROUGH.write.parquet("gs://crashes_bucket/top10_BOROUGH/")
+              newCrashDF.write.partitionBy("timestamp")
+                .parquet("gs://crashes_bucket/data/")
+              top20_ZIP_CODE.write.partitionBy("timestamp")
+                .parquet("gs://crashes_bucket/top20_ZIP_CODE/")
+              top10_BOROUGH.write.partitionBy("timestamp")
+                .parquet("gs://crashes_bucket/top10_BOROUGH/")
           }
-    }
 
     ssc.start()             // Start the computation
     ssc.awaitTermination()  // Wait for the computation to terminate
