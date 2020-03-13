@@ -20,6 +20,12 @@ object Main {
     }
   }
 
+  def nvl(r: String) = {
+    if (r.length() == 0) NullType else r
+  }
+
+  def nvlList(r: List[String]) = {r.map(r => nvl(r))}
+
   def main(args: Array[String]) : Unit = {
     val projectID = "igneous-equinox-269508"
     val slidingInterval: Int = 5*60
@@ -84,7 +90,7 @@ object Main {
         val splitRDD = rdd.map(attribute => attribute.split(""",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)"""))
           .map {
             attribute =>
-              attribute.take(10).toList :::
+              nvlList(attribute.take(10).toList) :::
               List(convertToInt(attribute(10)),
                 convertToInt(attribute(11)),
                 convertToInt(attribute(12)),
@@ -94,13 +100,13 @@ object Main {
                 convertToInt(attribute(16)),
                 convertToInt(attribute(17))
               ) :::
-              attribute.takeRight(11).toList
+              nvlList(attribute.takeRight(11).toList)
           }
           .map(attribute => Row.fromSeq(attribute))
 
               val crashDF = spark.createDataFrame(splitRDD, schema)
 
-              val newCrashDF = crashDF.withColumn("timestamp", current_timestamp())
+              val newCrashDF = crashDF.withColumn("timestamp", unix_timestamp())
 
               val top20_ZIP_CODE =
                 newCrashDF
