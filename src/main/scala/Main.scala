@@ -70,7 +70,8 @@ object Main {
       )
     )
 
-    messagesStream.foreachRDD{
+    messagesStream.window(Seconds(slidingInterval), Seconds(60))
+      .foreachRDD{
       rdd =>
         val splitRDD = rdd.map(attribute => attribute.split(""",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)"""))
           .map {
@@ -130,6 +131,7 @@ object Main {
           }
 
     ssc.start()             // Start the computation
-    ssc.awaitTermination()  // Wait for the computation to terminate
+    //ssc.awaitTermination()  // Wait for the computation to terminate
+    ssc.awaitTerminationOrTimeout(1000 * 60 * 60)
   }
 }
