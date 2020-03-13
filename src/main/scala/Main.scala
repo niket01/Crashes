@@ -72,43 +72,59 @@ object Main {
 
     messagesStream.foreachRDD{
       rdd =>
-        val splitRDD = rdd.map(x => Row(x.split(""",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)""")))
+        val splitRDD = rdd.map(attribute => attribute.split(""",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)"""))
+          .map {
+            attribute =>
+              attribute.take(10).toList :::
+              List(attribute(10).toInt,
+                attribute(11).toInt,
+                attribute(12).toInt,
+                attribute(13).toInt,
+                attribute(14).toInt,
+                attribute(15).toInt,
+                attribute(16).toInt,
+                attribute(17).toInt
+              ) :::
+              attribute.takeRight(11).toList
+          }
+          .map(attribute => Row.fromSeq(attribute))
 
-        val crashDF = spark.createDataFrame(splitRDD, schema)
+              val crashDF = spark.createDataFrame(splitRDD, schema)
 
-        val newCrashDF = crashDF.withColumn("timestamp", current_timestamp())
+              val newCrashDF = crashDF.withColumn("timestamp", current_timestamp())
 
-        val top20_ZIP_CODE =
-        newCrashDF
-          .where("ZIP_CODE != ''")
-          .groupBy("ZIP_CODE")
-          .agg(
-            count("*").alias("count_crashes"),
-            first("timestamp").alias("timestamp"),
-            row_number().over(orderBy(count(("*")).desc)).alias("rank")
-          )
-          .select("rank", "ZIP_CODE", "count_crashes", "timestamp")
-          .limit(20)
+              val top20_ZIP_CODE =
+                newCrashDF
+                  .where("ZIP_CODE != ''")
+                  .groupBy("ZIP_CODE")
+                  .agg(
+                    count("*").alias("count_crashes"),
+                    first("timestamp").alias("timestamp"),
+                    row_number().over(orderBy(count(("*")).desc)).alias("rank")
+                  )
+                  .select("rank", "ZIP_CODE", "count_crashes", "timestamp")
+                  .limit(20)
 
-        val top10_BOROUGH =
-          newCrashDF
-            .where("BOROUGH != ''")
-            .groupBy("BOROUGH")
-            .agg(
-              count("*").alias("count_crashes"),
-              first("timestamp").alias("timestamp"),
-              row_number().over(orderBy(count(("*")).desc)).alias("rank")
-            )
-            .select("rank", "BOROUGH", "count_crashes", "timestamp")
-            .limit(10)
+              val top10_BOROUGH =
+                newCrashDF
+                  .where("BOROUGH != ''")
+                  .groupBy("BOROUGH")
+                  .agg(
+                    count("*").alias("count_crashes"),
+                    first("timestamp").alias("timestamp"),
+                    row_number().over(orderBy(count(("*")).desc)).alias("rank")
+                  )
+                  .select("rank", "BOROUGH", "count_crashes", "timestamp")
+                  .limit(10)
 
-        /* здесь должны быть пострадавшие пассажиры */
+              /* здесь должны быть пострадавшие пассажиры */
 
-        /* коннектор к big query + импорт данных в созданные таблицы */
+              /* коннектор к big query + импорт данных в созданные таблицы */
 
-        newCrashDF.write.parquet("gs://crashes_bucket/data/")
-        top20_ZIP_CODE.write.parquet("gs://crashes_bucket/top20_ZIP_CODE/")
-        top10_BOROUGH.write.parquet("gs://crashes_bucket/top10_BOROUGH/")
+              newCrashDF.write.parquet("gs://crashes_bucket/data/")
+              top20_ZIP_CODE.write.parquet("gs://crashes_bucket/top20_ZIP_CODE/")
+              top10_BOROUGH.write.parquet("gs://crashes_bucket/top10_BOROUGH/")
+          }
     }
 
     ssc.start()             // Start the computation
