@@ -12,6 +12,14 @@ import org.apache.spark.streaming.dstream.DStream
 import org.apache.spark.streaming.pubsub.{PubsubUtils, SparkGCPCredentials}
 
 object Main {
+  def convertToInt(r: String) = {
+    try {
+      r.toInt
+    } catch {
+      case e: Exception => 0
+    }
+  }
+
   def main(args: Array[String]) : Unit = {
     val projectID = "igneous-equinox-269508"
     val slidingInterval: Int = 5*60
@@ -48,14 +56,14 @@ object Main {
         StructField("ON_STREET_NAME", StringType, nullable = true),
         StructField("CROSS_STREET_NAME", StringType, nullable = true),
         StructField("OFF_STREET_NAME", StringType, nullable = true),
-        StructField("NUMBER_OF_PERSONS_INJURED", StringType, nullable = true),
-        StructField("NUMBER_OF_PERSONS_KILLED", StringType, nullable = true),
-        StructField("NUMBER_OF_PEDESTRIANS_INJURED", StringType, nullable = true),
-        StructField("NUMBER_OF_PEDESTRIANS_KILLED", StringType, nullable = true),
-        StructField("NUMBER_OF_CYCLIST_INJURED", StringType, nullable = true),
-        StructField("NUMBER_OF_CYCLIST_KILLED", StringType, nullable = true),
-        StructField("NUMBER_OF_MOTORIST_INJURED", StringType, nullable = true),
-        StructField("NUMBER_OF_MOTORIST_KILLED", StringType, nullable = true),
+        StructField("NUMBER_OF_PERSONS_INJURED", IntegerType, nullable = false),
+        StructField("NUMBER_OF_PERSONS_KILLED", IntegerType, nullable = false),
+        StructField("NUMBER_OF_PEDESTRIANS_INJURED", IntegerType, nullable = false),
+        StructField("NUMBER_OF_PEDESTRIANS_KILLED", IntegerType, nullable = false),
+        StructField("NUMBER_OF_CYCLIST_INJURED", IntegerType, nullable = false),
+        StructField("NUMBER_OF_CYCLIST_KILLED", IntegerType, nullable = false),
+        StructField("NUMBER_OF_MOTORIST_INJURED", IntegerType, nullable = false),
+        StructField("NUMBER_OF_MOTORIST_KILLED", IntegerType, nullable = false),
         StructField("CONTRIBUTING_FACTOR_VEHICLE_1", StringType, nullable = true),
         StructField("CONTRIBUTING_FACTOR_VEHICLE_2", StringType, nullable = true),
         StructField("CONTRIBUTING_FACTOR_VEHICLE_3", StringType, nullable = true),
@@ -77,14 +85,14 @@ object Main {
           .map {
             attribute =>
               attribute.take(10).toList :::
-              List(attribute(10),
-                attribute(11),
-                attribute(12),
-                attribute(13),
-                attribute(14),
-                attribute(15),
-                attribute(16),
-                attribute(17)
+              List(convertToInt(attribute(10)),
+                convertToInt(attribute(11)),
+                convertToInt(attribute(12)),
+                convertToInt(attribute(13)),
+                convertToInt(attribute(14)),
+                convertToInt(attribute(15)),
+                convertToInt(attribute(16)),
+                convertToInt(attribute(17))
               ) :::
               attribute.takeRight(11).toList
           }
