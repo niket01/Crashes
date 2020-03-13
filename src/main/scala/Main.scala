@@ -10,38 +10,6 @@ import org.apache.spark.streaming.dstream.DStream
 import org.apache.spark.streaming.pubsub.{PubsubUtils, SparkGCPCredentials}
 
 object Main {
-  case class Crashes(
-                      CRASH_DATE: String,
-                      CRASH_TIME: String,
-                      BOROUGH: String,
-                      ZIP_CODE: String,
-                      LATITUDE: String,
-                      LONGITUDE: String,
-                      LOCATION: String,
-                      ON_STREET_NAME: String,
-                      CROSS_STREET_NAME: String,
-                      OFF_STREET_NAME: String,
-                      NUMBER_OF_PERSONS_INJURED: Int,
-                      NUMBER_OF_PERSONS_KILLED: Int,
-                      NUMBER_OF_PEDESTRIANS_INJURED: Int,
-                      NUMBER_OF_PEDESTRIANS_KILLED: Int,
-                      NUMBER_OF_CYCLIST_INJURED: Int,
-                      NUMBER_OF_CYCLIST_KILLED: Int,
-                      NUMBER_OF_MOTORIST_INJURED: Int,
-                      NUMBER_OF_MOTORIST_KILLED: Int,
-                      CONTRIBUTING_FACTOR_VEHICLE_1: String,
-                      CONTRIBUTING_FACTOR_VEHICLE_2: String,
-                      CONTRIBUTING_FACTOR_VEHICLE_3: String,
-                      CONTRIBUTING_FACTOR_VEHICLE_4: String,
-                      CONTRIBUTING_FACTOR_VEHICLE_5: String,
-                      COLLISION_ID: String,
-                      VEHICLE_TYPE_CODE_1: String,
-                      VEHICLE_TYPE_CODE_2: String,
-                      VEHICLE_TYPE_CODE_3: String,
-                      VEHICLE_TYPE_CODE_4: String,
-                      VEHICLE_TYPE_CODE_5: String
-                    )
-
   def main(args: Array[String]) : Unit = {
     val projectID = "igneous-equinox-269508"
     val slidingInterval: Int = 5*60
@@ -59,83 +27,47 @@ object Main {
 
     import spark.implicits._
 
-    val messagesStream: DStream[String] = PubsubUtils
+    val messagesStream = PubsubUtils
       .createStream(
         ssc,
         projectID,
         None,
         "crashes_subscriptions",
         SparkGCPCredentials.builder.build(), StorageLevel.MEMORY_AND_DISK_SER_2)
-      .map(message => new String(message.getData(), StandardCharsets.UTF_8))
+        .map(message => new String(message.getData(), StandardCharsets.UTF_8))
+        .map(str => str.split(""",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)"""))
+
 
     messagesStream.foreachRDD{
       rdd =>
-        val crashDF = rdd.map(_.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)"))
-            .map{
-              case Array(
-              s0,
-              s1,
-              s2,
-              s3,
-              s4,
-              s5,
-              s6,
-              s7,
-              s8,
-              s9,
-              s10,
-              s11,
-              s12,
-              s13,
-              s14,
-              s15,
-              s16,
-              s17,
-              s18,
-              s19,
-              s20,
-              s21,
-              s22,
-              s23,
-              s24,
-              s25,
-              s26,
-              s27,
-              s28
-              ) =>
-                Crashes(
-                  s0,
-                  s1,
-                  s2,
-                  s3,
-                  s4,
-                  s5,
-                  s6,
-                  s7,
-                  s8,
-                  s9,
-                  s10.toInt,
-                  s11.toInt,
-                  s12.toInt,
-                  s13.toInt,
-                  s14.toInt,
-                  s15.toInt,
-                  s16.toInt,
-                  s17.toInt,
-                  s18,
-                  s19,
-                  s20,
-                  s21,
-                  s22,
-                  s23,
-                  s24,
-                  s25,
-                  s26,
-                  s27,
-                  s28
-                )
-            }
-          .toDF()
+        val crashDF = rdd.toDF("CRASH_DATE",
+          "CRASH_TIME",
+          "BOROUGH",
+          "ZIP_CODE",
+          "LATITUDE",
+          "LONGITUDE",
+          "LOCATION",
+          "ON_STREET_NAME",
+          "CROSS_STREET_NAME",
+          "OFF_STREET_NAME",
+          "NUMBER_OF_PERSONS_INJURED",
+          "NUMBER_OF_PERSONS_KILLED",
+          "NUMBER_OF_PEDESTRIANS_INJURED",
+          "NUMBER_OF_PEDESTRIANS_KILLED",
+          "NUMBER_OF_CYCLIST_INJURED",
+          "NUMBER_OF_CYCLIST_KILLED",
+          "NUMBER_OF_MOTORIST_INJURED",
+          "NUMBER_OF_MOTORIST_KILLED",
+          "CONTRIBUTING_FACTOR_VEHICLE_1",
+          "CONTRIBUTING_FACTOR_VEHICLE_2",
+          "CONTRIBUTING_FACTOR_VEHICLE_3",
+          "CONTRIBUTING_FACTOR_VEHICLE_4",
+          "CONTRIBUTING_FACTOR_VEHICLE_5",
+          "COLLISION_ID,VEHICLE_TYPE_CODE_1",
+          "VEHICLE_TYPE_CODE_2",
+          "VEHICLE_TYPE_CODE_3",
+          "VEHICLE_TYPE_CODE_4",
+          "VEHICLE_TYPE_CODE_5")
 
         val newCrashDF = crashDF.withColumn("timestamp", current_timestamp())
 
