@@ -21,14 +21,14 @@ object Main {
   }
 
   def nvl(r: String) = {
-    if (r.length() == 0) NullType else r
+    if (r.length() == 0) null else r
   }
 
   def nvlList(r: List[String]) = {r.map(r => nvl(r))}
 
   def main(args: Array[String]) : Unit = {
     val projectID = "igneous-equinox-269508"
-    val slidingInterval: Int = 5*60
+    val slidingInterval: Int = 60
 
     val appName = "SparkCrashes"
 
@@ -84,7 +84,7 @@ object Main {
       )
     )
 
-    messagesStream.window(Seconds(slidingInterval), Seconds(60))
+    messagesStream.window(Seconds(5*60), Seconds(slidingInterval))
       .foreachRDD{
       rdd =>
         val splitRDD = rdd.map(attribute => attribute.split(""",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)"""))
@@ -106,7 +106,7 @@ object Main {
 
               val crashDF = spark.createDataFrame(splitRDD, schema)
 
-              val newCrashDF = crashDF.withColumn("timestamp", unix_timestamp())
+              val newCrashDF = crashDF.withColumn("timestamp", lit(unix_timestamp()))
 
               val top20_ZIP_CODE =
                 newCrashDF
@@ -136,11 +136,11 @@ object Main {
 
               /* коннектор к big query + импорт данных в созданные таблицы */
 
-              newCrashDF.write.partitionBy("timestamp")
+              newCrashDF.write.mode(SaveMode.Append).partitionBy("timestamp")
                 .parquet("gs://crashes_bucket/data/")
-              top20_ZIP_CODE.write.partitionBy("timestamp")
+              top20_ZIP_CODE.write.mode(SaveMode.Append).partitionBy("timestamp")
                 .parquet("gs://crashes_bucket/top20_ZIP_CODE/")
-              top10_BOROUGH.write.partitionBy("timestamp")
+              top10_BOROUGH.write.mode(SaveMode.Append).partitionBy("timestamp")
                 .parquet("gs://crashes_bucket/top10_BOROUGH/")
           }
 
