@@ -12,7 +12,7 @@ import org.apache.spark.streaming.pubsub.{PubsubUtils, SparkGCPCredentials}
 object Main {
   def main(args: Array[String]) : Unit = {
     val projectID = "igneous-equinox-269508"
-    val slidingInterval: Int = 5*60
+    val slidingInterval: Int = 60
 
     val appName = "SparkCrashes"
 
@@ -25,9 +25,7 @@ object Main {
       .config(conf)
       .getOrCreate()
 
-    import spark.implicits._
-
-    val messagesStream = PubsubUtils
+    val messagesStream: DStream[String] = PubsubUtils
       .createStream(
         ssc,
         projectID,
@@ -35,12 +33,13 @@ object Main {
         "crashes_subscriptions",
         SparkGCPCredentials.builder.build(), StorageLevel.MEMORY_AND_DISK_SER_2)
         .map(message => new String(message.getData(), StandardCharsets.UTF_8))
-        .map(str => str.split(""",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)"""))
 
 
     messagesStream.foreachRDD{
       rdd =>
-        val crashDF = rdd.toDF("CRASH_DATE",
+        val splitRDD = rdd.map(_.split(""",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)""").toList)
+
+        val crashDF = spark.createDataFrame(splitRDD).toDF("CRASH_DATE",
           "CRASH_TIME",
           "BOROUGH",
           "ZIP_CODE",
@@ -67,7 +66,8 @@ object Main {
           "VEHICLE_TYPE_CODE_2",
           "VEHICLE_TYPE_CODE_3",
           "VEHICLE_TYPE_CODE_4",
-          "VEHICLE_TYPE_CODE_5")
+          "VEHICLE_TYPE_CODE_5"
+        )
 
         val newCrashDF = crashDF.withColumn("timestamp", current_timestamp())
 
@@ -99,9 +99,9 @@ object Main {
 
         /* коннектор к big query + импорт данных в созданные таблицы */
 
-        newCrashDF.write.parquet("gs://crashes_bucket/data/" + current_timestamp().toString())
-        top20_ZIP_CODE.write.parquet("gs://crashes_bucket/top20_ZIP_CODE/" + current_timestamp().toString())
-        top10_BOROUGH.write.parquet("gs://crashes_bucket/top10_BOROUGH/" + current_timestamp().toString())
+        newCrashDF.write.parquet("gs://crashes_bucket/data/")
+        top20_ZIP_CODE.write.parquet("gs://crashes_bucket/top20_ZIP_CODE/")
+        top10_BOROUGH.write.parquet("gs://crashes_bucket/top10_BOROUGH/")
     }
 
     ssc.start()             // Start the computation
