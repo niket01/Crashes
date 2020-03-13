@@ -4,6 +4,8 @@ import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.expressions.Window.orderBy
 import org.apache.spark.sql.functions._
+import org.apache.spark.sql.types._
+import org.apache.spark.sql._
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.streaming.{Seconds, StreamingContext}
 import org.apache.spark.streaming.dstream.DStream
@@ -34,40 +36,45 @@ object Main {
         SparkGCPCredentials.builder.build(), StorageLevel.MEMORY_AND_DISK_SER_2)
         .map(message => new String(message.getData(), StandardCharsets.UTF_8))
 
+    val schema = StructType(
+      List(
+        StructField("CRASH_DATE", StringType, true),
+        StructField("CRASH_TIME", StringType, true),
+        StructField("BOROUGH", StringType, true),
+        StructField("ZIP_CODE", StringType, true),
+        StructField("LATITUDE", StringType, true),
+        StructField("LONGITUDE", StringType, true),
+        StructField("LOCATION", StringType, true),
+        StructField("ON_STREET_NAME", StringType, true),
+        StructField("CROSS_STREET_NAME", StringType, true),
+        StructField("OFF_STREET_NAME", StringType, true),
+        StructField("NUMBER_OF_PERSONS_INJURED", IntegerType, true),
+        StructField("NUMBER_OF_PERSONS_KILLED", IntegerType, true),
+        StructField("NUMBER_OF_PEDESTRIANS_INJURED", IntegerType, true),
+        StructField("NUMBER_OF_PEDESTRIANS_KILLED", IntegerType, true),
+        StructField("NUMBER_OF_CYCLIST_INJURED", IntegerType, true),
+        StructField("NUMBER_OF_CYCLIST_KILLED", IntegerType, true),
+        StructField("NUMBER_OF_MOTORIST_INJURED", IntegerType, true),
+        StructField("NUMBER_OF_MOTORIST_KILLED", IntegerType, true),
+        StructField("CONTRIBUTING_FACTOR_VEHICLE_1", StringType, true),
+        StructField("CONTRIBUTING_FACTOR_VEHICLE_2", StringType, true),
+        StructField("CONTRIBUTING_FACTOR_VEHICLE_3", StringType, true),
+        StructField("CONTRIBUTING_FACTOR_VEHICLE_4", StringType, true),
+        StructField("CONTRIBUTING_FACTOR_VEHICLE_5", StringType, true),
+        StructField("COLLISION_ID", StringType, true),
+        StructField("VEHICLE_TYPE_CODE_1", StringType, true),
+        StructField("VEHICLE_TYPE_CODE_2", StringType, true),
+        StructField("VEHICLE_TYPE_CODE_3", StringType, true),
+        StructField("VEHICLE_TYPE_CODE_4", StringType, true),
+        StructField("VEHICLE_TYPE_CODE_5", StringType, true)
+      )
+    )
 
     messagesStream.foreachRDD{
       rdd =>
-        val splitRDD = rdd.map(_.split(""",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)""").toList)
+        val splitRDD = rdd.map(x => Row(x.split(""",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)""")))
 
-        val crashDF = spark.createDataFrame(splitRDD).toDF("CRASH_DATE",
-          "CRASH_TIME",
-          "BOROUGH",
-          "ZIP_CODE",
-          "LATITUDE",
-          "LONGITUDE",
-          "LOCATION",
-          "ON_STREET_NAME",
-          "CROSS_STREET_NAME",
-          "OFF_STREET_NAME",
-          "NUMBER_OF_PERSONS_INJURED",
-          "NUMBER_OF_PERSONS_KILLED",
-          "NUMBER_OF_PEDESTRIANS_INJURED",
-          "NUMBER_OF_PEDESTRIANS_KILLED",
-          "NUMBER_OF_CYCLIST_INJURED",
-          "NUMBER_OF_CYCLIST_KILLED",
-          "NUMBER_OF_MOTORIST_INJURED",
-          "NUMBER_OF_MOTORIST_KILLED",
-          "CONTRIBUTING_FACTOR_VEHICLE_1",
-          "CONTRIBUTING_FACTOR_VEHICLE_2",
-          "CONTRIBUTING_FACTOR_VEHICLE_3",
-          "CONTRIBUTING_FACTOR_VEHICLE_4",
-          "CONTRIBUTING_FACTOR_VEHICLE_5",
-          "COLLISION_ID,VEHICLE_TYPE_CODE_1",
-          "VEHICLE_TYPE_CODE_2",
-          "VEHICLE_TYPE_CODE_3",
-          "VEHICLE_TYPE_CODE_4",
-          "VEHICLE_TYPE_CODE_5"
-        )
+        val crashDF = spark.createDataFrame(splitRDD, schema)
 
         val newCrashDF = crashDF.withColumn("timestamp", current_timestamp())
 
