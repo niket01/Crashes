@@ -145,11 +145,11 @@ object Main {
            )
 
           count_injured.write.format("bigquery").option("table", "ratings.injured")
-            .mode(SaveMode.Append).save()
+            .option("temporaryGcsBucket","crashes_bucket").mode(SaveMode.Append).save()
           top20_ZIP_CODE.write.format("bigquery").option("table", "ratings.rating_zip_code")
-            .mode(SaveMode.Append).save()
+            .option("temporaryGcsBucket","crashes_bucket").mode(SaveMode.Append).save()
           top10_BOROUGH.write.format("bigquery").option("table", "ratings.rating_borough")
-            .mode(SaveMode.Append).save()
+            .option("temporaryGcsBucket","crashes_bucket").mode(SaveMode.Append).save()
 
           newCrashDF.write.mode(SaveMode.Append).partitionBy("timestamp")
             .parquet("gs://crashes_bucket/data/")
