@@ -46,6 +46,12 @@
             <version>2.2.0</version>
         </dependency>
 
+        <dependency>
+            <groupId>com.google.cloud.spark</groupId>
+            <artifactId>spark-bigquery-with-dependencies_2.11</artifactId>
+            <version>0.13.1-beta</version>
+        </dependency>
+
     </dependencies>
 
     <build>
