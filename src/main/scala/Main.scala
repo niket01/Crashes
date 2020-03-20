@@ -1,6 +1,7 @@
 import java.nio.charset.StandardCharsets
 
 import org.apache.spark.SparkConf
+import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.expressions.Window.orderBy
 import org.apache.spark.sql.functions._
@@ -25,6 +26,26 @@ object Main {
   }
 
   def nvlList(r: List[String]) = {r.map(r => nvl(r))}
+
+  private def extractCrashe(input: RDD[String]) = {
+    input.map(_.split(""",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)"""))
+      .filter(_.length != 0)
+      .map {
+        attribute =>
+          nvlList(attribute.take(10).toList) :::
+            List(convertToInt(attribute(10)),
+              convertToInt(attribute(11)),
+              convertToInt(attribute(12)),
+              convertToInt(attribute(13)),
+              convertToInt(attribute(14)),
+              convertToInt(attribute(15)),
+              convertToInt(attribute(16)),
+              convertToInt(attribute(17))
+            ) :::
+            nvlList(attribute.takeRight(11).toList)
+      }
+      .map(attribute => Row.fromSeq(attribute))
+  }
 
   def main(args: Array[String]) : Unit = {
     val projectID = "igneous-equinox-269508"
@@ -86,63 +107,50 @@ object Main {
 
     messagesStream.window(Seconds(5*60), Seconds(slidingInterval))
       .foreachRDD{
-      rdd =>
-        val splitRDD = rdd.map(attribute => attribute.split(""",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)"""))
-          .map {
-            attribute =>
-              nvlList(attribute.take(10).toList) :::
-              List(convertToInt(attribute(10)),
-                convertToInt(attribute(11)),
-                convertToInt(attribute(12)),
-                convertToInt(attribute(13)),
-                convertToInt(attribute(14)),
-                convertToInt(attribute(15)),
-                convertToInt(attribute(16)),
-                convertToInt(attribute(17))
-              ) :::
-              nvlList(attribute.takeRight(11).toList)
-          }
-          .map(attribute => Row.fromSeq(attribute))
+        rdd =>
+          val crashDF = spark.createDataFrame(extractCrashe(rdd), schema)
 
-              val crashDF = spark.createDataFrame(splitRDD, schema)
+          val newCrashDF = crashDF.withColumn("timestamp", lit(unix_timestamp())).cache()
 
-              val newCrashDF = crashDF.withColumn("timestamp", lit(unix_timestamp()))
+          val top20_ZIP_CODE =
+            newCrashDF
+              .where("ZIP_CODE != ''")
+              .groupBy("ZIP_CODE")
+              .agg(
+                count("*").alias("count_crashes"),
+                first("timestamp").alias("timestamp"),
+                row_number().over(orderBy(count(("*")).desc)).alias("rank")
+              )
+              .select("rank", "ZIP_CODE", "count_crashes", "timestamp")
+              .limit(20)
 
-              val top20_ZIP_CODE =
-                newCrashDF
-                  .where("ZIP_CODE != ''")
-                  .groupBy("ZIP_CODE")
-                  .agg(
-                    count("*").alias("count_crashes"),
-                    first("timestamp").alias("timestamp"),
-                    row_number().over(orderBy(count(("*")).desc)).alias("rank")
-                  )
-                  .select("rank", "ZIP_CODE", "count_crashes", "timestamp")
-                  .limit(20)
+          val top10_BOROUGH =
+            newCrashDF
+              .where("BOROUGH != ''")
+              .groupBy("BOROUGH")
+              .agg(
+                count("*").alias("count_crashes"),
+                first("timestamp").alias("timestamp"),
+                row_number().over(orderBy(count(("*")).desc)).alias("rank")
+              )
+              .select("rank", "BOROUGH", "count_crashes", "timestamp")
+              .limit(10)
 
-              val top10_BOROUGH =
-                newCrashDF
-                  .where("BOROUGH != ''")
-                  .groupBy("BOROUGH")
-                  .agg(
-                    count("*").alias("count_crashes"),
-                    first("timestamp").alias("timestamp"),
-                    row_number().over(orderBy(count(("*")).desc)).alias("rank")
-                  )
-                  .select("rank", "BOROUGH", "count_crashes", "timestamp")
-                  .limit(10)
+           val count_injured = newCrashDF.agg(
+             sum("NUMBER_OF_PERSONS_INJURED").alias("count_injured"),
+             sum("NUMBER_OF_PEDESTRIANS_INJURED").alias("count_pedestrians_injured"),
+             sum("NUMBER_OF_CYCLIST_INJURED").alias("count_cyclist_injured"),
+             sum("NUMBER_OF_MOTORIST_INJURED").alias("count_motorist_injured"),
+             first("timestamp").alias("timestamp")
+           )
 
-              /* здесь должны быть пострадавшие пассажиры */
+          count_injured.write.format("bigquery").option("table", "ratings.injured").save()
+          top20_ZIP_CODE.write.format("bigquery").option("table", "ratings.rating_zip_code").save()
+          top10_BOROUGH.write.format("bigquery").option("table", "ratings.rating_borough").save()
 
-              /* коннектор к big query + импорт данных в созданные таблицы */
-
-              newCrashDF.write.mode(SaveMode.Append).partitionBy("timestamp")
-                .parquet("gs://crashes_bucket/data/")
-              top20_ZIP_CODE.write.mode(SaveMode.Append).partitionBy("timestamp")
-                .parquet("gs://crashes_bucket/top20_ZIP_CODE/")
-              top10_BOROUGH.write.mode(SaveMode.Append).partitionBy("timestamp")
-                .parquet("gs://crashes_bucket/top10_BOROUGH/")
-          }
+          newCrashDF.write.mode(SaveMode.Append).partitionBy("timestamp")
+            .parquet("gs://crashes_bucket/data/")
+        }
 
     ssc.start()             // Start the computation
     //ssc.awaitTermination()  // Wait for the computation to terminate
