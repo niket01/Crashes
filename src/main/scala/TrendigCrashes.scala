@@ -50,7 +50,7 @@ object TrendigCrashes {
       .foreachRDD {
         rdd =>
           val crashDF = spark.createDataFrame(extractCrashe(rdd), schema)
-            .withColumn("timestamp", lit(date_format(current_timestamp(), "dd.MM.yyyy-hh:mm")))
+            .withColumn("timestamp", lit(date_format(current_timestamp(), "dd.MM.yyyy_hh-mm")))
               .cache()
 
           findCountInjured(crashDF).write.format("bigquery").option("table", "ratings.injured")
