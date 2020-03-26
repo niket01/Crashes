@@ -48,7 +48,7 @@ object TrendigCrashes {
 
   def processTrendingCrashes(stream: DStream[SparkPubsubMessage], windowInterval: Int, slidingInterval: Int,
                              spark: SparkSession) = {
-    stream.window(Seconds(5 * 60), Seconds(slidingInterval))
+    stream.window(Seconds(windowInterval), Seconds(slidingInterval))
       .foreachRDD {
         rdd =>
           val crashDF = spark.createDataFrame(extractCrashe(rdd), schema)

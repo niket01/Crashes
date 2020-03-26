@@ -40,7 +40,7 @@ object Main {
     if (args.length != 4) {
       System.err.println(
         """
-          | Usage: TrendingHashtags <projectID> <windowLength> <slidingInterval>
+          | Usage: TrendingHashtags <projectID> <windowLength> <slidingInterval> <totalRunningTime>
           |
           |     <projectID>: ID of Google Cloud project
           |     <windowLength>: The duration of the window, in seconds
