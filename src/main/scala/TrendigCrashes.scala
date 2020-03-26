@@ -1,5 +1,3 @@
-package scala
-
 import org.apache.spark.sql.expressions.Window.orderBy
 import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 import org.apache.spark.sql.functions.{count, current_timestamp, first, lit, row_number, sum, date_format}
@@ -7,7 +5,7 @@ import org.apache.spark.streaming.Seconds
 import org.apache.spark.streaming.dstream.DStream
 import org.apache.spark.streaming.pubsub.SparkPubsubMessage
 
-import scala.Convert.{extractCrashe, schema}
+import Convert.{extractCrashe, schema}
 
 object TrendigCrashes {
 
@@ -62,7 +60,7 @@ object TrendigCrashes {
           findTop10Borough(crashDF).write.format("bigquery").option("table", "ratings.rating_borough")
             .option("temporaryGcsBucket","crashes_bucket").mode(SaveMode.Append).save()
 
-          crashDF.write.mode(SaveMode.Append).partitionBy("date_format(timestamp, 'yyyyMMdd_mm')")
+          crashDF.write.mode(SaveMode.Append).partitionBy("timestamp")
             .parquet("gs://crashes_bucket/data/")
       }
   }

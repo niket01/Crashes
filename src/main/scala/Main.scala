@@ -1,5 +1,3 @@
-package scala
-
 import org.apache.spark.SparkConf
 
 import org.apache.spark.sql.SparkSession
@@ -8,7 +6,7 @@ import org.apache.spark.storage.StorageLevel
 import org.apache.spark.streaming.{Seconds, StreamingContext}
 import org.apache.spark.streaming.pubsub.{PubsubUtils, SparkGCPCredentials}
 
-import scala.TrendigCrashes.processTrendingCrashes
+import TrendigCrashes.processTrendingCrashes
 
 object Main {
   def createContext(projectID: String, windowInterval: Int, slidingInterval: Int) = {
