@@ -11,7 +11,7 @@ import scala.Convert.{extractCrashe, schema}
 
 object TrendigCrashes {
 
-  def findTop20ZipCode(input: DataFrame) =
+  private def findTop20ZipCode(input: DataFrame) =
     input
       .where("ZIP_CODE != ''")
       .groupBy("ZIP_CODE")
@@ -23,7 +23,7 @@ object TrendigCrashes {
       .select("rank", "ZIP_CODE", "count_crashes", "timestamp")
       .limit(20)
 
-  def findTop10Borough(input: DataFrame) =
+  private def findTop10Borough(input: DataFrame) =
     input
       .where("BOROUGH != ''")
       .groupBy("BOROUGH")
@@ -36,7 +36,7 @@ object TrendigCrashes {
       .limit(10)
 
 
-  def findCountInjured(input: DataFrame) =
+  private def findCountInjured(input: DataFrame) =
     input
       .agg(
         sum("NUMBER_OF_PERSONS_INJURED").alias("count_injured"),
